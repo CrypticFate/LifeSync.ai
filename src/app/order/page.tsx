@@ -7,14 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronLeft, ChevronRight, User, Heart, Activity, Dna } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, User, Heart, Activity, Dna, Loader } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import withAuth from '@/components/with-auth';
+import { useAuth } from '@/hooks/use-auth';
+import { saveOrderToFirestore } from '@/lib/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface FormData {
   // Segment 1: Contact & Scheduling
@@ -55,9 +58,12 @@ const segmentTitles = [
   { title: 'Personal & Lifestyle', icon: Activity },
 ];
 
-export default function OrderPage() {
+function OrderPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
   const [currentSegment, setCurrentSegment] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     // Segment 1
     fullName: '',
@@ -129,14 +135,65 @@ export default function OrderPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateSegment(3)) {
-      console.log('Order submitted:', formData);
-      // Store form data (in a real app, you'd send this to an API)
-      localStorage.setItem('orderData', JSON.stringify(formData));
-      // Redirect to confirmation page
-      router.push('/order/confirmation');
+    if (!validateSegment(3)) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Please sign in to submit an order.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Save order to Firebase Firestore
+      const result = await saveOrderToFirestore(
+        user.uid,
+        user.email || '',
+        user.displayName || user.email || 'User',
+        formData
+      );
+
+      if (result.success) {
+        // Store order ID in localStorage for confirmation page
+        localStorage.setItem('lastOrderId', result.orderId || '');
+        localStorage.setItem('orderData', JSON.stringify(formData));
+
+        toast({
+          title: 'Success!',
+          description: 'Your order has been submitted successfully.',
+          variant: 'default',
+        });
+
+        // Redirect to confirmation page with order ID
+        router.push(`/order/confirmation?orderId=${result.orderId}`);
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to submit order. Please try again.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting order:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -465,7 +522,7 @@ export default function OrderPage() {
                             id="height"
                             value={formData.height}
                             onChange={(e) => updateFormData('height', e.target.value)}
-                            placeholder="e.g., 175 cm or 5'9&quot;"
+                            placeholder={"e.g., 175 cm or 5'9\""}
                             className="mt-1"
                           />
                         </div>
@@ -620,12 +677,21 @@ export default function OrderPage() {
                       </Button>
                       <Button 
                         type="submit"
-                        disabled={!validateSegment(3)}
+                        disabled={!validateSegment(3) || isSubmitting}
                         size="lg"
                         className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300"
                       >
-                        Submit Order
-                        <Check className="h-5 w-5 ml-2" />
+                        {isSubmitting ? (
+                          <>
+                            <Loader className="h-5 w-5 mr-2 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            Submit Order
+                            <Check className="h-5 w-5 ml-2" />
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
@@ -638,3 +704,5 @@ export default function OrderPage() {
     </div>
   );
 }
+
+export default withAuth(OrderPage);
