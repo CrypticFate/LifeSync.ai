@@ -247,7 +247,7 @@ export function ReportDisplay({
               </h3>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base"
+                  className="bg-slate-700 hover:bg-slate-800 text-white px-8 py-3 text-base font-medium shadow-sm"
                   onClick={onAdvancedSuggestions}
                   disabled={!onAdvancedSuggestions}
                 >
@@ -256,7 +256,7 @@ export function ReportDisplay({
                 </Button>
                 <Button 
                   variant="outline"
-                  className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-base"
+                  className="border-slate-600 text-slate-700 hover:bg-slate-50 hover:text-slate-800 px-8 py-3 text-base font-medium shadow-sm"
                   onClick={onSeekConsultation}
                   disabled={!onSeekConsultation}
                 >

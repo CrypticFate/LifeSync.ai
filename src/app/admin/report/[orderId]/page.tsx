@@ -555,55 +555,146 @@ ${report.conclusions}
         {report && report.status === 'completed' && (
           <>
             {/* Executive Summary */}
-            <Card className="mb-6">
+            <Card className="mb-6 bg-blue-50 border-blue-200">
               <CardHeader>
-                <CardTitle className="text-lg">Executive Summary</CardTitle>
+                <CardTitle className="text-lg text-blue-900">Executive Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <MarkdownRenderer content={report.summary} />
+                <MarkdownRenderer content={report.summary} className="prose-sm" />
               </CardContent>
             </Card>
 
             {/* Report Sections */}
-            {report.sections.map((section, index) => (
+            {report.sections
+              .filter(section => {
+                const lowerTitle = section.title.toLowerCase();
+                return !lowerTitle.includes('key recommendations') &&
+                       !lowerTitle.includes('recommendations') &&
+                       !lowerTitle.includes('personalized wellness plan') &&
+                       !lowerTitle.includes('urgent medical concerns') &&
+                       !lowerTitle.includes('conclusions') &&
+                       !lowerTitle.includes('executive summary') &&
+                       lowerTitle !== 'personalized health analysis report' &&
+                       section.content.trim().length > 20;
+              })
+              .map((section, index) => (
               <Card key={index} className="mb-6">
                 <CardHeader>
-                  <CardTitle className="text-lg">{section.title}</CardTitle>
+                  <CardTitle className="text-lg text-gray-900">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <MarkdownRenderer content={section.content} />
+                  <MarkdownRenderer content={section.content} className="prose-sm" />
                 </CardContent>
               </Card>
             ))}
 
             {/* Recommendations */}
-            {report.recommendations.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="text-lg">Key Recommendations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {report.recommendations.map((rec, index) => (
-                      <li key={index} className="flex gap-3">
-                        <span className="font-semibold text-blue-600 shrink-0">
-                          {index + 1}.
-                        </span>
-                        <span className="text-gray-700">{rec}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
+            <Card className="mb-6 bg-green-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-lg text-green-900">Key Recommendations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // Try to extract Key Recommendations section from full content
+                  const fullContent = report.fullContent;
+                  
+                  // Try different possible section headers
+                  const patterns = [
+                    /## Key Recommendations\s*([\s\S]*?)(?=\n## |\n# |$)/i,
+                    /Key Recommendations:\s*([\s\S]*?)(?=\n## |\n# |$)/i,
+                    /## Recommendations\s*([\s\S]*?)(?=\n## |\n# |$)/i,
+                    /Recommendations:\s*([\s\S]*?)(?=\n## |\n# |$)/i
+                  ];
+                  
+                  for (const pattern of patterns) {
+                    const match = fullContent.match(pattern);
+                    if (match && match[1]) {
+                      const content = match[1].trim();
+                      if (content.length > 10) {
+                        return <MarkdownRenderer content={content} className="prose-sm" />;
+                      }
+                    }
+                  }
+                  
+                  // Fallback to the parsed recommendations array
+                  if (report.recommendations && report.recommendations.length > 0) {
+                    return (
+                      <ul className="space-y-2">
+                        {report.recommendations.slice(0, 6).map((rec, index) => (
+                          <li key={index} className="flex gap-3">
+                            <span className="font-semibold text-green-700 shrink-0">
+                              {index + 1}.
+                            </span>
+                            <span className="text-gray-700 text-sm">{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }
+                  
+                  // Final fallback
+                  return (
+                    <div className="text-gray-600 italic text-sm">
+                      <p>Recommendations are integrated within the health assessment sections above.</p>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Urgent Concerns */}
+            {(() => {
+              const urgentConcerns = report.sections.find(section => 
+                section.title.toLowerCase().includes('urgent') ||
+                section.title.toLowerCase().includes('medical concerns')
+              );
+              
+              if (urgentConcerns && urgentConcerns.content.trim().length > 10) {
+                return (
+                  <Card className="mb-6 bg-red-50 border-red-200">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-red-900 flex items-center gap-2">
+                        ⚠️ Urgent Medical Concerns
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MarkdownRenderer content={urgentConcerns.content} className="prose-sm" />
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Wellness Plan */}
+            {(() => {
+              const wellnessPlan = report.sections.find(section => 
+                section.title.toLowerCase().includes('wellness plan') ||
+                section.title.toLowerCase().includes('personalized wellness')
+              );
+              
+              if (wellnessPlan) {
+                return (
+                  <Card className="mb-6">
+                    <CardHeader>
+                      <CardTitle className="text-lg text-gray-900">Personalized Wellness Plan</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MarkdownRenderer content={wellnessPlan.content} className="prose-sm" />
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return null;
+            })()}
 
             {/* Conclusions */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle className="text-lg">Conclusions</CardTitle>
+                <CardTitle className="text-lg text-gray-900">Conclusions</CardTitle>
               </CardHeader>
               <CardContent>
-                <MarkdownRenderer content={report.conclusions} />
+                <MarkdownRenderer content={report.conclusions} className="prose-sm" />
               </CardContent>
             </Card>
 
@@ -616,7 +707,7 @@ ${report.conclusions}
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base"
+                      className="bg-slate-700 hover:bg-slate-800 text-white px-8 py-3 text-base font-medium shadow-sm"
                       onClick={() => handleAdvancedSuggestions()}
                     >
                       <Brain className="w-5 h-5 mr-2" />
@@ -624,7 +715,7 @@ ${report.conclusions}
                     </Button>
                     <Button 
                       variant="outline"
-                      className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-base"
+                      className="border-slate-600 text-slate-700 hover:bg-slate-50 hover:text-slate-800 px-8 py-3 text-base font-medium shadow-sm"
                       onClick={() => handleSeekConsultation()}
                     >
                       <FileText className="w-5 h-5 mr-2" />

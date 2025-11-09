@@ -13,29 +13,29 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
   const components: Components = {
     // Headings with proper styling and spacing
     h1: ({ children }) => (
-      <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6 first:mt-0">
+      <h1 className="text-xl font-bold text-gray-900 mb-3 mt-4 first:mt-0">
         {children}
       </h1>
     ),
     h2: ({ children }) => (
-      <h2 className="text-xl font-semibold text-gray-800 mb-3 mt-5 first:mt-0">
+      <h2 className="text-lg font-semibold text-gray-800 mb-2 mt-4 first:mt-0">
         {children}
       </h2>
     ),
     h3: ({ children }) => (
-      <h3 className="text-lg font-semibold text-gray-800 mb-2 mt-4 first:mt-0">
+      <h3 className="text-base font-semibold text-gray-800 mb-2 mt-3 first:mt-0">
         {children}
       </h3>
     ),
     h4: ({ children }) => (
-      <h4 className="text-base font-semibold text-gray-800 mb-2 mt-3 first:mt-0">
+      <h4 className="text-sm font-semibold text-gray-800 mb-1 mt-2 first:mt-0">
         {children}
       </h4>
     ),
     
     // Paragraphs with proper spacing
     p: ({ children }) => (
-      <p className="text-gray-700 leading-relaxed mb-4 last:mb-0">
+      <p className="text-gray-700 leading-relaxed mb-3 last:mb-0">
         {children}
       </p>
     ),

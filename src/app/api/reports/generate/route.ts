@@ -168,41 +168,48 @@ function generateReportPrompt(orderData: any, userName: string): string {
   logReport(`     ✓ Motivations: ${motivations ? motivations.join(', ') : 'None'}`);
   logReport(`     ✓ Health Questionnaire: ${Object.keys(sleepEnergy || {}).length} sleep, ${Object.keys(cardiovascularHealth || {}).length} cardio questions answered`);
 
-  // Format health questionnaire responses
+  // Format health questionnaire responses with complete question-answer pairs
   const formatQuestionnaire = (category: string, data: Record<string, string> = {}) => {
     if (!data || Object.keys(data).length === 0) return '';
     
+    // Comprehensive question mapping with detailed context
     const questions: Record<string, string> = {
+      // Sleep and Energy Questions
       sleep_hours: 'Do you sleep less than 6 or more than 9 hours per night consistently?',
       wake_gasping: 'Do you often wake up gasping for air, choking, or with a dry mouth?',
       exhausted: 'Do you feel exhausted even after a full night\'s sleep?',
       sleep_changes: 'Have you noticed sudden changes in your sleep pattern in the past month?',
       night_sweats: 'Do you experience night sweats or abnormal body temperature during sleep?',
       
+      // Cardiovascular Questions
       chest_pain: 'Do you frequently feel chest tightness, pain, or pressure, especially during exertion?',
       shortness_breath: 'Do you experience shortness of breath when walking short distances or climbing stairs?',
       swelling: 'Have you noticed swelling in your ankles, feet, or hands recently?',
       irregular_heartbeat: 'Do you experience irregular or rapid heartbeat episodes?',
       heart_history: 'Do you have a history of high blood pressure, high cholesterol, or diabetes?',
       
+      // Metabolic and Endocrine Questions
       weight_change: 'Have you experienced unexplained weight loss or gain in the past 3 months?',
       thirst_urinate: 'Do you often feel excessively thirsty or urinate more than normal?',
       shaky_dizzy: 'Do you frequently feel shaky, dizzy, or fatigued without reason?',
       temp_tolerance: 'Have you noticed significant changes in body temperature tolerance (cold or heat)?',
       skin_hair_nails: 'Do you have persistent dry skin, thinning hair, or brittle nails?',
       
+      // Digestive Questions
       indigestion: 'Have you had persistent indigestion, heartburn, or difficulty swallowing?',
       blood_stool: 'Have you noticed blood in your stool, dark tar-like stools, or abdominal pain?',
       diarrhea_bloating: 'Do you have frequent diarrhea, constipation, or unexplained bloating?',
       appetite_loss: 'Have you recently lost appetite or feel full very quickly after eating?',
       nausea_vomiting: 'Do you experience chronic nausea or vomiting without identifiable cause?',
       
+      // Cancer and Immune System Questions
       lumps_swelling: 'Have you found any lumps, swellings, or thickened areas in your body?',
       fever_sweats: 'Have you experienced unexplained fever, chills, or night sweats lasting weeks?',
       bruise_bleed: 'Do you bruise or bleed more easily than usual?',
       skin_changes: 'Have you noticed any non-healing sores, warts, or skin color changes?',
       cough_blood: 'Have you experienced persistent cough, hoarseness, or blood in sputum?',
       
+      // Neurological and Musculoskeletal Questions
       headaches: 'Do you experience frequent headaches, vision changes, or episodes of dizziness?',
       numbness_tingling: 'Have you felt numbness, tingling, or weakness in your limbs?',
       tremors: 'Do you have tremors or uncontrolled muscle movements?',
@@ -211,22 +218,44 @@ function generateReportPrompt(orderData: any, userName: string): string {
     };
 
     let result = `\n## ${category}:\n`;
+    let hasValidAnswers = false;
+    
     for (const [key, answer] of Object.entries(data)) {
-      const question = questions[key] || key;
-      result += `- Q: ${question}\n  A: ${answer}\n`;
+      const question = questions[key] || `Question about ${key.replace(/_/g, ' ')}`;
+      
+      // Only include if there's a meaningful answer
+      if (answer && answer.trim() !== '' && answer.toLowerCase() !== 'undefined') {
+        result += `\n**Q: ${question}**\n`;
+        result += `**Answer:** ${answer}\n`;
+        
+        // Add clinical significance note for concerning answers (for AI context only)
+        if (['often', 'yes', 'sometimes'].includes(answer.toLowerCase())) {
+          result += `*Clinical Note: This response indicates potential health concern requiring evaluation.*\n`;
+        }
+        hasValidAnswers = true;
+      }
     }
-    return result;
+    
+    return hasValidAnswers ? result : '';
   };
 
   const healthQuestionnaireSection = `
-## DETAILED HEALTH QUESTIONNAIRE RESPONSES:
-${formatQuestionnaire('Sleep and Energy', sleepEnergy)}
-${formatQuestionnaire('Cardiovascular and Circulatory Health', cardiovascularHealth)}
-${formatQuestionnaire('Metabolic and Endocrine Health', metabolicHealth)}
-${formatQuestionnaire('Digestive and Abdominal Health', digestiveHealth)}
-${formatQuestionnaire('Cancer and Immune System Indicators', cancerImmuneHealth)}
-${formatQuestionnaire('Neurological and Musculoskeletal Health', neurologicalHealth)}
-`;
+## COMPREHENSIVE HEALTH QUESTIONNAIRE ANALYSIS:
+**Instructions for AI Analysis:** The following are specific health questions with the user's exact responses. Use both the question context AND the specific answer to provide targeted, evidence-based health analysis.
+
+${formatQuestionnaire('Sleep and Energy Assessment', sleepEnergy)}
+${formatQuestionnaire('Cardiovascular and Circulatory Health Assessment', cardiovascularHealth)}
+${formatQuestionnaire('Metabolic and Endocrine Health Assessment', metabolicHealth)}
+${formatQuestionnaire('Digestive and Abdominal Health Assessment', digestiveHealth)}
+${formatQuestionnaire('Cancer and Immune System Risk Assessment', cancerImmuneHealth)}
+${formatQuestionnaire('Neurological and Musculoskeletal Health Assessment', neurologicalHealth)}
+
+## ANALYSIS REQUIREMENTS:
+- Analyze based on the specific answers provided, but DO NOT include raw question text in the final report
+- Explain health significance in professional medical language
+- Base risk levels on actual responses, not assumptions
+- Provide evidence-based recommendations without quoting questionnaire text
+- Keep the report concise and professional - avoid duplication`;
 
   return `You are a professional health and wellness analyst. Based on the following comprehensive health assessment, analyze my answers and generate a highly detailed, structured report about my overall health and lifestyle.
 
@@ -292,81 +321,56 @@ ${healthQuestionnaireSection}
 ---
 
 ## REPORT FORMAT REQUIREMENT:
-Create a comprehensive report with these sections using PROPER MARKDOWN formatting:
+Create a concise, professional medical report. DO NOT include raw questionnaire text or citations in the final report.
 
 # Personalized Health Analysis Report
 
 ## Executive Summary
-Write 2-3 paragraphs synthesizing overall health status with **bold** for key findings and risk levels.
+Write 2-3 concise paragraphs covering overall health status, main concerns, and key action items. DO NOT quote questionnaire text.
 
 ## Sleep and Energy Assessment
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Key Findings:**
-  - Use bullet points for major findings
-  - **Bold** important symptoms or conditions
-  - Include specific evidence from questionnaire
+**Risk Level:** [LOW/MODERATE/HIGH/URGENT]
 
-## Cardiovascular and Circulatory Health
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Assessment:**
-  - Heart health indicators
-  - Blood pressure concerns
-  - Exercise capacity analysis
-- **Recommendations:**
-  1. Numbered recommendations
-  2. **Bold** critical actions
+Brief professional assessment (2-3 sentences) based on responses without citing questions.
 
-## Metabolic and Endocrine Health
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Findings:**
-  - Weight management status
-  - Blood sugar indicators
-  - Thyroid function signs
+## Cardiovascular Health Assessment
+**Risk Level:** [LOW/MODERATE/HIGH/URGENT]
 
-## Digestive and Abdominal Health
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Status:** Brief overview with **bold** key concerns
+Concise analysis of heart health with key concerns. No questionnaire quotes.
 
-## Cancer Risk Assessment
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Immune System Markers:**
-  - List specific warning signs
-  - **Bold** any urgent concerns
+## Metabolic and Digestive Health
+**Risk Level:** [LOW/MODERATE/HIGH/URGENT]
 
-## Neurological and Musculoskeletal Health
-- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
-- **Assessment:** Include nervous system and joint health
+Combined assessment covering metabolism and digestive function. Professional language only.
+
+## Cancer and Neurological Risk Assessment
+**Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+
+Brief evaluation of risks without quoting questionnaire text.
 
 ## Key Recommendations
+
 ### Immediate Actions (Next 30 Days)
-1. **Bold priority action**
-2. Secondary recommendation
+1. **Most critical action item**
+2. **Second priority action**
+3. **Third priority action**
 
 ### Long-term Goals (3-6 Months)
-- Specific, measurable wellness goals
-- **Bold** critical lifestyle changes
+- **Primary goal** with specific timeline
+- **Secondary goal** with measurable target
 
-## Urgent Concerns
-> Use blockquotes for any red flags requiring immediate medical attention
+## Urgent Medical Concerns
+> **URGENT:** List red flags requiring immediate medical attention
 
-## Personalized Wellness Plan
-### Phase 1 (Weeks 1-4)
-- **Goal:** Specific target
-- **Action:** Concrete steps
+## Conclusions
+Brief 2-3 sentence summary with overall prognosis.
 
-### Phase 2 (Weeks 5-12)
-- **Goal:** Next target
-- **Action:** Progressive steps
-
-IMPORTANT: Use proper markdown formatting throughout:
-- # for main title
-- ## for section headers
-- ### for subsections
-- **bold** for emphasis and key points
-- Bullet points with - or *
-- Numbered lists 1. 2. 3.
-- > for blockquotes (urgent items)
-- Clear line breaks between sections
+CRITICAL FORMATTING RULES:
+- NO questionnaire quotes or question text in the final report
+- Keep each section concise (2-3 sentences max)
+- Use professional medical language
+- NO duplication between sections
+- Write as a medical professional would
 `;
 }
 
@@ -488,24 +492,76 @@ function parseGeminiReport(
 function extractRecommendations(content: string): string[] {
   const recommendations: string[] = [];
   
-  // Look for bullet points or numbered items
-  const lines = content.split('\n');
-  for (const line of lines) {
-    if (line.match(/^[-•*]\s+/) || line.match(/^\d+\.\s+/)) {
-      const recommendation = line.replace(/^[-•*\d.]+\s+/, '').trim();
-      if (recommendation && recommendation.length > 10) {
-        recommendations.push(recommendation);
+  // Look for sections that contain recommendations
+  const recommendationSections = [
+    /## Key Recommendations([\s\S]*?)(?=##|$)/i,
+    /### Immediate Actions[\s\S]*?(?=###|##|$)/i,
+    /### Long-term Goals[\s\S]*?(?=###|##|$)/i,
+    /Recommendations:([\s\S]*?)(?=##|$)/i
+  ];
+
+  for (const sectionRegex of recommendationSections) {
+    const sectionMatch = content.match(sectionRegex);
+    if (sectionMatch) {
+      const sectionContent = sectionMatch[1] || sectionMatch[0];
+      
+      // Extract numbered recommendations (1. 2. 3. etc.)
+      const numberedItems = sectionContent.match(/^\d+\.\s+(.+?)$/gm);
+      if (numberedItems) {
+        numberedItems.forEach(item => {
+          const cleanItem = item.replace(/^\d+\.\s+/, '').trim();
+          if (cleanItem.length > 10 && !cleanItem.startsWith('**')) {
+            recommendations.push(cleanItem);
+          }
+        });
+      }
+      
+      // Extract bullet point recommendations (- * •)
+      const bulletItems = sectionContent.match(/^[-•*]\s+(.+?)$/gm);
+      if (bulletItems) {
+        bulletItems.forEach(item => {
+          const cleanItem = item.replace(/^[-•*]\s+/, '').trim();
+          if (cleanItem.length > 10 && !cleanItem.startsWith('**')) {
+            recommendations.push(cleanItem);
+          }
+        });
       }
     }
   }
 
-  // If no recommendations found, extract key insights
+  // If still no recommendations found, try a more general approach
   if (recommendations.length === 0) {
-    const insights = content.match(/\b(recommend|consider|should|important|focus|prioritize)[\s\S]{0,100}/gi) || [];
-    return insights.map(i => i.trim()).slice(0, 5);
+    const lines = content.split('\n');
+    let inRecommendationSection = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Check if we're entering a recommendations section
+      if (trimmed.toLowerCase().includes('recommendation') || 
+          trimmed.toLowerCase().includes('action') ||
+          trimmed.toLowerCase().includes('next steps')) {
+        inRecommendationSection = true;
+        continue;
+      }
+      
+      // Check if we're leaving the section (new heading)
+      if (trimmed.startsWith('#') && inRecommendationSection) {
+        inRecommendationSection = false;
+        continue;
+      }
+      
+      // Extract recommendations in the section
+      if (inRecommendationSection && (trimmed.match(/^[-•*]\s+/) || trimmed.match(/^\d+\.\s+/))) {
+        const recommendation = trimmed.replace(/^[-•*\d.]+\s+/, '').trim();
+        if (recommendation && recommendation.length > 10 && !recommendation.startsWith('**')) {
+          recommendations.push(recommendation);
+        }
+      }
+    }
   }
 
-  return recommendations.slice(0, 10); // Return top 10 recommendations
+  return recommendations.slice(0, 8); // Return top 8 recommendations
 }
 
 /**
