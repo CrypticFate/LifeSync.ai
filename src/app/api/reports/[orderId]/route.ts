@@ -8,10 +8,10 @@ import { getReportByOrderId } from '@/lib/firestore';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const orderId = params.orderId;
+    const { orderId } = await params;
     
     // Get user ID from headers
     const userId = request.headers.get('x-user-id');

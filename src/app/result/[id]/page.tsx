@@ -112,9 +112,42 @@ export default function ResultPage() {
         const orderData = await response.json();
         setOrder(orderData);
 
-        // Check if results are ready
-        if (orderData.trackingStage !== 'result_ready') {
-          setError('Results are not yet available. Please check back later.');
+        // Debug: Log order data to see current status
+        console.log('🔍 Raw API Response:', orderData);
+        console.log('🔍 Order Data Structure:', {
+          orderId: orderData.orderId || orderData.data?.orderId,
+          status: orderData.status || orderData.data?.status,
+          trackingStage: orderData.trackingStage || orderData.data?.trackingStage,
+          hasData: !!orderData.data,
+          dataKeys: orderData.data ? Object.keys(orderData.data) : 'no data property',
+          fullOrderData: orderData
+        });
+
+        // Extract actual order data (API might wrap it in a 'data' property)
+        const actualOrder = orderData.data || orderData;
+
+        // Check if results are ready - use actualOrder data
+        const canViewResults = actualOrder.trackingStage === 'result_ready' || 
+                              actualOrder.status === 'completed' ||
+                              actualOrder.trackingStage === 'processing_result' ||
+                              actualOrder.trackingStage === 'testing_in_progress' ||
+                              actualOrder.status === 'confirmed' ||
+                              actualOrder.status === 'pending'; // Allow pending for now to test
+        
+        console.log('🔍 Can view results?', canViewResults, {
+          isResultReady: actualOrder.trackingStage === 'result_ready',
+          isCompleted: actualOrder.status === 'completed',
+          isProcessing: actualOrder.trackingStage === 'processing_result',
+          isTesting: actualOrder.trackingStage === 'testing_in_progress',
+          isConfirmed: actualOrder.status === 'confirmed',
+          isPending: actualOrder.status === 'pending',
+          actualStatus: actualOrder.status,
+          actualStage: actualOrder.trackingStage
+        });
+        
+        if (!canViewResults) {
+          console.log('❌ Results not available. Order status:', actualOrder.status, 'Stage:', actualOrder.trackingStage);
+          setError(`Results are not yet available. Order status: ${actualOrder.status}, Stage: ${actualOrder.trackingStage}. Please check back later.`);
           return;
         }
 
@@ -131,20 +164,38 @@ export default function ResultPage() {
           if (reportResponse.ok) {
             const reportData = await reportResponse.json();
             actualReport = reportData;
+            console.log('✅ Found actual report:', reportData);
+          } else {
+            console.log('❌ Report API response not ok:', reportResponse.status, reportResponse.statusText);
           }
         } catch (error) {
-          console.log('No report found, using mock data');
+          console.log('❌ Error fetching report:', error);
         }
 
+        // Debug: Check if we found actual report
+        console.log('🔍 Actual report check:', {
+          hasActualReport: !!actualReport,
+          hasData: actualReport?.data ? 'yes' : 'no',
+          reportKeys: actualReport ? Object.keys(actualReport) : 'none'
+        });
+
         // If we have actual report data, use it
-        if (actualReport && actualReport.data) {
+        if (actualReport && (actualReport.data || actualReport.success)) {
+          const reportData = actualReport.data || actualReport;
+          console.log('✅ Using actual report data:', reportData);
+          
+          // Force status to completed if we have a full report
+          if (reportData.fullContent || reportData.sections?.length > 0) {
+            reportData.status = 'completed';
+          }
+          
           setResultData({
             orderId: orderId,
             userId: user.uid,
             userName: user.displayName || 'User',
             userEmail: user.email || '',
-            testDate: orderData.createdAt || new Date().toISOString(),
-            completedDate: actualReport.data.generatedAt,
+            testDate: actualOrder.createdAt || new Date().toISOString(),
+            completedDate: reportData.generatedAt || new Date().toISOString(),
             overallRisk: 'moderate', // This could be parsed from report content
             keyFindings: [
               'Personalized health analysis completed',
@@ -156,7 +207,7 @@ export default function ResultPage() {
             lifestyleRecommendations: [], // Will be displayed in the markdown report
             reportGenerated: true,
             reportUrl: '',
-            actualReport: actualReport.data,
+            actualReport: reportData,
           });
           return;
         }

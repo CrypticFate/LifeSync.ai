@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Check, Phone, Mail, MapPin, Star, Users, Shield, Activity, Heart, Dna, Clock, Package, MessageCircle } from 'lucide-react';
-import AuthButton from '@/components/auth-button';
+import ProfileDropdown from '@/components/profile-dropdown';
 import { TrackOrderNav } from '@/components/track-order-nav';
 import { NotificationButton } from '@/components/notification-button';
 import { PopupNotification } from '@/components/popup-notification';
@@ -62,7 +62,7 @@ export default function Home() {
               <Button variant="outline" className="border-blue-600 text-blue-600 hover:bg-blue-50" asChild>
                 <a href="/order">Register Kit</a>
               </Button>
-              <AuthButton />
+              <ProfileDropdown />
             </nav>
             <Button className="md:hidden" variant="ghost" size="sm">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -167,11 +167,15 @@ export function ReportDisplay({
                 className={
                   report.status === 'completed' 
                     ? 'bg-green-100 text-green-800 border-green-300' 
+                    : report.status === 'generating'
+                    ? 'bg-orange-100 text-orange-800 border-orange-300'
                     : 'bg-gray-100 text-gray-800'
                 }
               >
                 <CheckCircle2 className="h-3 w-3 mr-1" />
-                {report.status === 'completed' ? 'Complete' : report.status}
+                {report.status === 'completed' ? 'Complete' : 
+                 report.status === 'generating' ? 'Processing' : 
+                 report.status || 'Complete'}
               </Badge>
               {onDownload && (
                 <Button size="sm" variant="outline" onClick={onDownload}>
@@ -226,14 +230,59 @@ export function ReportDisplay({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-gray-700" />
-            Comprehensive Analysis
+            Comprehensive Health Analysis
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <MarkdownRenderer 
-            content={report.fullContent} 
-            className="max-w-none prose-headings:text-gray-900 prose-p:text-gray-700"
-          />
+          {report.fullContent ? (
+            <MarkdownRenderer 
+              content={report.fullContent} 
+              className="max-w-none prose-headings:text-gray-900 prose-p:text-gray-700"
+            />
+          ) : (
+            <div className="space-y-4">
+              {report.summary && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Executive Summary</h3>
+                  <MarkdownRenderer content={report.summary} />
+                </div>
+              )}
+              
+              {report.sections && report.sections.length > 0 && (
+                <div className="space-y-6">
+                  {report.sections.map((section, index) => (
+                    <div key={index}>
+                      <h3 className="text-lg font-semibold mb-2">{section.title}</h3>
+                      <MarkdownRenderer content={section.content} />
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {report.recommendations && report.recommendations.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Key Recommendations</h3>
+                  <ul className="space-y-2">
+                    {report.recommendations.map((rec, index) => (
+                      <li key={index} className="flex gap-3">
+                        <span className="font-semibold text-blue-600 shrink-0">
+                          {index + 1}.
+                        </span>
+                        <span className="text-gray-700">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {report.conclusions && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Conclusions</h3>
+                  <MarkdownRenderer content={report.conclusions} />
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

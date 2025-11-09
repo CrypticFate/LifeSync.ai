@@ -9,9 +9,9 @@ import { getOrderById, updateOrderTrackingStage } from '@/lib/firestore';
 import { TrackingStage } from '@/types/order';
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 /**
@@ -20,7 +20,7 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { orderId } = params;
+    const { orderId } = await params;
     const userId = request.headers.get('x-user-id');
 
     if (!userId) {
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
-    const { orderId } = params;
+    const { orderId } = await params;
     const userId = request.headers.get('x-user-id');
 
     if (!userId) {
