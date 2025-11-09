@@ -292,20 +292,81 @@ ${healthQuestionnaireSection}
 ---
 
 ## REPORT FORMAT REQUIREMENT:
-Create a comprehensive report with these sections:
+Create a comprehensive report with these sections using PROPER MARKDOWN formatting:
 
-1. **Executive Summary** (2-3 paragraphs synthesizing overall health status)
-2. **Sleep and Energy Assessment** (analysis of sleep patterns, fatigue, energy levels with risk level)
-3. **Cardiovascular and Circulatory Health** (heart health, blood pressure indicators, exercise capacity with risk level)
-4. **Metabolic and Endocrine Health** (weight management, blood sugar indicators, thyroid function signs with risk level)
-5. **Digestive and Abdominal Health** (digestive system status, GI concerns with risk level)
-6. **Cancer Risk Assessment** (immune system markers, warning signs with risk level)
-7. **Neurological and Musculoskeletal Health** (nervous system, brain health, muscle/joint status with risk level)
-8. **Key Recommendations** (prioritized action items based on identified risks)
-9. **Urgent Concerns** (if any red flags requiring immediate medical attention)
-10. **Personalized Wellness Plan** (3-6 month plan with specific, measurable goals)
+# Personalized Health Analysis Report
 
-Use headings, bullet points, and clear formatting. Make it professional yet accessible. Base every recommendation on evidence from the health questionnaire responses provided.
+## Executive Summary
+Write 2-3 paragraphs synthesizing overall health status with **bold** for key findings and risk levels.
+
+## Sleep and Energy Assessment
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Key Findings:**
+  - Use bullet points for major findings
+  - **Bold** important symptoms or conditions
+  - Include specific evidence from questionnaire
+
+## Cardiovascular and Circulatory Health
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Assessment:**
+  - Heart health indicators
+  - Blood pressure concerns
+  - Exercise capacity analysis
+- **Recommendations:**
+  1. Numbered recommendations
+  2. **Bold** critical actions
+
+## Metabolic and Endocrine Health
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Findings:**
+  - Weight management status
+  - Blood sugar indicators
+  - Thyroid function signs
+
+## Digestive and Abdominal Health
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Status:** Brief overview with **bold** key concerns
+
+## Cancer Risk Assessment
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Immune System Markers:**
+  - List specific warning signs
+  - **Bold** any urgent concerns
+
+## Neurological and Musculoskeletal Health
+- **Risk Level:** [LOW/MODERATE/HIGH/URGENT]
+- **Assessment:** Include nervous system and joint health
+
+## Key Recommendations
+### Immediate Actions (Next 30 Days)
+1. **Bold priority action**
+2. Secondary recommendation
+
+### Long-term Goals (3-6 Months)
+- Specific, measurable wellness goals
+- **Bold** critical lifestyle changes
+
+## Urgent Concerns
+> Use blockquotes for any red flags requiring immediate medical attention
+
+## Personalized Wellness Plan
+### Phase 1 (Weeks 1-4)
+- **Goal:** Specific target
+- **Action:** Concrete steps
+
+### Phase 2 (Weeks 5-12)
+- **Goal:** Next target
+- **Action:** Progressive steps
+
+IMPORTANT: Use proper markdown formatting throughout:
+- # for main title
+- ## for section headers
+- ### for subsections
+- **bold** for emphasis and key points
+- Bullet points with - or *
+- Numbered lists 1. 2. 3.
+- > for blockquotes (urgent items)
+- Clear line breaks between sections
 `;
 }
 
@@ -321,24 +382,56 @@ function parseGeminiReport(
 ) {
   console.log('   🔍 Parsing report content...');
   
-  // Extract sections from the report
+  // Extract sections from the report - improved markdown parsing
   const sections: Array<{ title: string; content: string }> = [];
   
-  // Split by common report section headers
-  const sectionRegex = /^(#{1,3}\s+.+?)$/gm;
-  const parts = content.split(sectionRegex).filter(Boolean);
-
-  console.log(`   📑 Found ${Math.floor(parts.length / 2)} sections in report`);
-
-  for (let i = 0; i < parts.length; i += 2) {
-    const title = parts[i]?.replace(/^#+\s+/, '').trim() || 'Section';
-    const sectionContent = parts[i + 1]?.trim() || '';
+  // Better regex to capture markdown sections with their content
+  const lines = content.split('\n');
+  let currentSection: { title: string; content: string[] } | null = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
     
-    if (sectionContent) {
-      sections.push({ title, content: sectionContent });
-      console.log(`     ✓ Section ${sections.length}: "${title}" (${sectionContent.length} chars)`);
+    // Check for markdown headers (## Section Title)
+    const headerMatch = line.match(/^(#{1,3})\s+(.+)$/);
+    
+    if (headerMatch) {
+      // Save previous section if exists
+      if (currentSection) {
+        sections.push({
+          title: currentSection.title,
+          content: currentSection.content.join('\n').trim()
+        });
+      }
+      
+      // Start new section
+      currentSection = {
+        title: headerMatch[2].trim(),
+        content: []
+      };
+      
+      console.log(`     ✓ Found section: "${currentSection.title}"`);
+    } else if (currentSection && line) {
+      // Add content to current section
+      currentSection.content.push(lines[i]); // Keep original formatting
+    } else if (!currentSection && line && sections.length === 0) {
+      // Content before first header - create intro section
+      sections.push({
+        title: 'Introduction',
+        content: lines.slice(0, i + 1).join('\n').trim()
+      });
     }
   }
+  
+  // Don't forget the last section
+  if (currentSection) {
+    sections.push({
+      title: currentSection.title,
+      content: currentSection.content.join('\n').trim()
+    });
+  }
+
+  console.log(`   📑 Parsed ${sections.length} sections from report`);
 
   // If parsing failed or no sections found, create basic structure
   if (sections.length === 0) {

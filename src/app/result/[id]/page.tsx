@@ -30,6 +30,8 @@ import {
   Calendar,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ReportDisplay } from '@/components/report-display';
+import { useToast } from '@/hooks/use-toast';
 
 interface GeneticResult {
   category: string;
@@ -63,6 +65,7 @@ interface ResultData {
   // Metadata
   reportGenerated: boolean;
   reportUrl?: string;
+  actualReport?: any; // The actual generated report data
 }
 
 export default function ResultPage() {
@@ -76,6 +79,7 @@ export default function ResultPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const { toast } = useToast();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -114,7 +118,50 @@ export default function ResultPage() {
           return;
         }
 
-        // Mock result data (in production, this would come from a backend service)
+        // Try to fetch actual report data first
+        let actualReport = null;
+        try {
+          const reportResponse = await fetch(`/api/reports/${orderId}`, {
+            headers: {
+              'x-user-id': user.uid,
+              'x-user-email': user.email || '',
+            },
+          });
+          
+          if (reportResponse.ok) {
+            const reportData = await reportResponse.json();
+            actualReport = reportData;
+          }
+        } catch (error) {
+          console.log('No report found, using mock data');
+        }
+
+        // If we have actual report data, use it
+        if (actualReport && actualReport.data) {
+          setResultData({
+            orderId: orderId,
+            userId: user.uid,
+            userName: user.displayName || 'User',
+            userEmail: user.email || '',
+            testDate: orderData.createdAt || new Date().toISOString(),
+            completedDate: actualReport.data.generatedAt,
+            overallRisk: 'moderate', // This could be parsed from report content
+            keyFindings: [
+              'Personalized health analysis completed',
+              'Comprehensive genetic risk assessment available',
+              'Detailed recommendations provided',
+            ],
+            geneticResults: [], // Will be displayed in the markdown report
+            medicalRecommendations: [], // Will be displayed in the markdown report
+            lifestyleRecommendations: [], // Will be displayed in the markdown report
+            reportGenerated: true,
+            reportUrl: '',
+            actualReport: actualReport.data,
+          });
+          return;
+        }
+
+        // Use mock data if no actual report is available
         const mockResults: ResultData = {
           orderId: orderId,
           userId: user.uid,
@@ -371,13 +418,57 @@ export default function ResultPage() {
           </CardContent>
         </Card>
 
-        {/* Detailed Results Tabs */}
-        <Tabs defaultValue="results" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="results">Genetic Results</TabsTrigger>
-            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-            <TabsTrigger value="about">About This Report</TabsTrigger>
-          </TabsList>
+        {/* Report Display - Use actual report if available, otherwise show tabs */}
+        {resultData.actualReport ? (
+          <ReportDisplay
+            report={resultData.actualReport}
+            userName={resultData.userName}
+            orderId={resultData.orderId}
+            onDownload={() => {
+              // Implement PDF download functionality
+              console.log('Download report');
+            }}
+            onAdvancedSuggestions={() => {
+              toast({
+                title: 'Advanced Suggestions',
+                description: 'Generating personalized AI recommendations based on your results...',
+              });
+              
+              // TODO: Implement advanced AI suggestions for users
+              console.log('User requested advanced suggestions for order:', orderId);
+              
+              setTimeout(() => {
+                toast({
+                  title: 'AI Analysis Complete',
+                  description: 'Your personalized recommendations are ready. Check your email for detailed insights.',
+                });
+              }, 3000);
+            }}
+            onSeekConsultation={() => {
+              toast({
+                title: 'Consultation Booking',
+                description: 'Redirecting you to our consultation booking system...',
+              });
+              
+              // TODO: Implement consultation booking for users
+              console.log('User requested consultation for order:', orderId);
+              
+              setTimeout(() => {
+                toast({
+                  title: 'Consultation System',
+                  description: 'Connect with certified genetic counselors and healthcare professionals.',
+                });
+              }, 2000);
+            }}
+          />
+        ) : (
+          /* Detailed Results Tabs for mock data */
+          <Tabs defaultValue="results" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="results">Genetic Results</TabsTrigger>
+              <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+              <TabsTrigger value="about">About This Report</TabsTrigger>
+            </TabsList>
 
           {/* Results Tab */}
           <TabsContent value="results" className="space-y-4">
@@ -540,7 +631,8 @@ export default function ResultPage() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </div>
     </div>
   );

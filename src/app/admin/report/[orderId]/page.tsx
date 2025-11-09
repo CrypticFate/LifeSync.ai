@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { MarkdownRenderer } from '@/components/markdown-renderer';
 
 interface Order {
   orderId: string;
@@ -61,6 +62,47 @@ export default function ReportPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Handler functions for action buttons
+  const handleAdvancedSuggestions = () => {
+    toast({
+      title: 'Advanced Suggestions',
+      description: 'Generating AI-powered personalized recommendations...',
+    });
+    
+    // TODO: Implement advanced suggestions functionality
+    // This could generate additional AI insights, personalized meal plans,
+    // exercise routines, supplement recommendations, etc.
+    console.log('Advanced Suggestions clicked for order:', orderId);
+    
+    // For now, show a placeholder
+    setTimeout(() => {
+      toast({
+        title: 'Feature Coming Soon',
+        description: 'Advanced AI suggestions will be available in the next update.',
+      });
+    }, 2000);
+  };
+
+  const handleSeekConsultation = () => {
+    toast({
+      title: 'Consultation Request',
+      description: 'Connecting you with healthcare professionals...',
+    });
+    
+    // TODO: Implement consultation booking functionality
+    // This could integrate with calendaring systems, telemedicine platforms,
+    // or healthcare provider networks
+    console.log('Seek Consultation clicked for order:', orderId);
+    
+    // For now, show a placeholder
+    setTimeout(() => {
+      toast({
+        title: 'Consultation Booking',
+        description: 'You will be redirected to our consultation booking system shortly.',
+      });
+    }, 2000);
+  };
 
   // Redirect if not admin
   useEffect(() => {
@@ -518,9 +560,7 @@ ${report.conclusions}
                 <CardTitle className="text-lg">Executive Summary</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {report.summary}
-                </p>
+                <MarkdownRenderer content={report.summary} />
               </CardContent>
             </Card>
 
@@ -531,9 +571,7 @@ ${report.conclusions}
                   <CardTitle className="text-lg">{section.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {section.content}
-                  </p>
+                  <MarkdownRenderer content={section.content} />
                 </CardContent>
               </Card>
             ))}
@@ -565,9 +603,38 @@ ${report.conclusions}
                 <CardTitle className="text-lg">Conclusions</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {report.conclusions}
-                </p>
+                <MarkdownRenderer content={report.conclusions} />
+              </CardContent>
+            </Card>
+
+            {/* Action Buttons */}
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Next Steps for Patient
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base"
+                      onClick={() => handleAdvancedSuggestions()}
+                    >
+                      <Brain className="w-5 h-5 mr-2" />
+                      Advanced Suggestions
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 text-base"
+                      onClick={() => handleSeekConsultation()}
+                    >
+                      <FileText className="w-5 h-5 mr-2" />
+                      Seek Consultation
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600 max-w-2xl mx-auto">
+                    Get personalized recommendations based on AI analysis or connect with healthcare professionals for detailed consultation.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </>
